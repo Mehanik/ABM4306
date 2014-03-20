@@ -15,15 +15,26 @@ class ABM4306():
     self.ser = serial.Serial()
     self.ser.port = port_name
     self.ser.baudrate = baudrate
-    self.ser.open()
+    self.ser.timeout = 0.6
 
     self.__last_val = None
     self.__data_receivrd = threading.Event()
+    self.__stop_request = threading.Event()
 
+  def open(self):
+    self.ser.open()
+    self.__stop_request.clear()
     self.__t = threading.Thread(target=self.__RcvData)
     self.__t.start()
 
+  def close(self):
+    self.__stop_request.set()
+    #self.__t.join()
+    self.ser.close()
+
   def ReadValue(self):
+    if (not self.__t.isAlive()):
+      return None
     self.__data_receivrd.clear()
     self.__data_receivrd.wait()
     return self.__last_val
@@ -35,7 +46,7 @@ class ABM4306():
     return float(s)
 
   def __RcvData(self):
-    while(1):
+    while(not self.__stop_request.isSet()):
       try:
         d = self.ser.readline()
         v = self.__Bytes2Float(d)
