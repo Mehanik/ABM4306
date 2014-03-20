@@ -20,21 +20,30 @@ class ABM4306():
     self.__last_val = None
     self.__data_receivrd = threading.Event()
     self.__stop_request = threading.Event()
+    self.__is_opened = False
 
   def open(self):
-    self.ser.open()
-    self.__stop_request.clear()
-    self.__t = threading.Thread(target=self.__RcvData)
-    self.__t.start()
+    if (not self.__is_opened):
+      self.__is_opened = True
+      self.ser.open()
+      self.__stop_request.clear()
+      self.__t = threading.Thread(target=self.__RcvData)
+      self.__t.start()
+    else:
+      raise ABM4306Exception("Device is already open.")
 
   def close(self):
-    self.__stop_request.set()
-    #self.__t.join()
-    self.ser.close()
+    if (self.__is_opened):
+      self.__is_opened = False
+      self.__stop_request.set()
+      #self.__t.join()
+      self.ser.close()
+    else:
+      raise ABM4306Exception("Device is not open.")
 
   def ReadValue(self):
-    if (not self.__t.isAlive()):
-      return None
+    if (not self.__is_opened):
+      raise ABM4306Exception("Device is not open.")
     self.__data_receivrd.clear()
     self.__data_receivrd.wait()
     return self.__last_val
@@ -43,7 +52,8 @@ class ABM4306():
     """Decode data received from multimeter"""
     s = data.decode('UTF-8')
     s = s[:-2]
-    return float(s)
+    f = float(s)
+    return f
 
   def __RcvData(self):
     while(not self.__stop_request.isSet()):
@@ -55,3 +65,11 @@ class ABM4306():
       finally:
         self.__last_val = v
         self.__data_receivrd.set()
+
+
+class ABM4306Exception(Exception):
+  def __init__(self, msg: str):
+    self.msg = msg
+
+  def __str__(self):
+    return self.msg
