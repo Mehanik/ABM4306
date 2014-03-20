@@ -28,6 +28,7 @@ class ABM4306():
       self.ser.open()
       self.__stop_request.clear()
       self.__t = threading.Thread(target=self.__RcvData)
+      self.__t.daemon = True
       self.__t.start()
     else:
       raise ABM4306Exception("Device is already open.")
@@ -67,9 +68,5 @@ class ABM4306():
         self.__data_receivrd.set()
 
 
-class ABM4306Exception(Exception):
-  def __init__(self, msg: str):
-    self.msg = msg
-
-  def __str__(self):
-    return self.msg
+class ABM4306Exception(RuntimeError):
+  pass
