@@ -3,19 +3,28 @@ import serial
 import threading
 
 class ABM4306():
-  """Read data from Aktakom ABM-4306 using serial interface
+  """Read data from Agilent U3401A/Aktakom ABM-4306 using serial interface
 
   RS-232 "Print" mode must be enabled,
   Shift -> Setup -> Shift -> Lo -> Lo -> Lo -> Lo -> Lo -> Hold -> Shift -> 2nd -> 2nd
+
+  Example:
+    from abm4306 import ABM4306
+    m = ABM4306("/dev/ttyS0")
+    m.open()
+    m.ReadValue()
+      0.004017
   """
 
 
-  def __init__(self, port_name: str = None, baudrate: int = 9600):
-    """port_name -- for example '/dev/ttyS0'"""
+  def __init__(self, port_name: str = None, baudrate: int = 9600, timeout: float = 0.6):
+    """port_name -- for example "/dev/ttyS0"
+    timeout in seconds
+    """
     self.ser = serial.Serial()
     self.ser.port = port_name
     self.ser.baudrate = baudrate
-    self.ser.timeout = 0.6
+    self.ser.timeout = timeout
 
     self.__last_val = None
     self.__data_receivrd = threading.Event()
@@ -37,12 +46,13 @@ class ABM4306():
     if (self.__is_opened):
       self.__is_opened = False
       self.__stop_request.set()
-      #self.__t.join()
       self.ser.close()
     else:
       raise ABM4306Exception("Device is not open.")
 
   def ReadValue(self):
+    """return next recieved from multimeter value,
+    return None if timeout or any error"""
     if (not self.__is_opened):
       raise ABM4306Exception("Device is not open.")
     self.__data_receivrd.clear()
